@@ -42,3 +42,83 @@ zlib\contrib\masmx64\bld_ml64.bat
 解决方法：在 zlib工程中添加宏 ZLIB_WINAPI
  
 3.其它问题一般设置 设置zlibstat项目编译方式(MT/MD) 和EXE /DLL一致，一般可以解决。
+
+zlib (gzip) (二) winodws gzib使用
+#include "stdafx.h"
+#include "zlib/zlib.h"
+#include <stdlib.h>
+#include <windows.h>
+#pragma comment (lib, "zlibstatic.lib")
+static int  gzCompress(const unsigned char *src, int srcLen, unsigned char *dest, int destLen)
+{
+	z_stream c_stream;
+	int err = 0;
+	int windowBits = 15;
+	int GZIP_ENCODING = 16;
+
+	/* 压缩级别 */
+//#define Z_NO_COMPRESSION         0  
+//#define Z_BEST_SPEED             1  
+//#define Z_BEST_COMPRESSION       9  
+//#define Z_DEFAULT_COMPRESSION  (-1)  
+	if (src && srcLen > 0)
+	{
+		c_stream.zalloc = (alloc_func)0;
+		c_stream.zfree = (free_func)0;
+		c_stream.opaque = (voidpf)0;
+		if (deflateInit2(&c_stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+			windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) != Z_OK) return -1;
+		c_stream.next_in = (Bytef *)src;
+		c_stream.avail_in = srcLen;
+		c_stream.next_out = (Bytef *)dest;
+		c_stream.avail_out = destLen;
+		while (c_stream.avail_in != 0 && c_stream.total_out < destLen)
+		{
+			if (deflate(&c_stream, Z_NO_FLUSH) != Z_OK) return -1;
+		}
+		if (c_stream.avail_in != 0) return c_stream.avail_in;
+		for (;;) {
+			if ((err = deflate(&c_stream, Z_FINISH)) == Z_STREAM_END) break;
+			if (err != Z_OK) return -1;
+		}
+		if (deflateEnd(&c_stream) != Z_OK) return -1;
+		return c_stream.total_out;
+	}
+	return -1;
+}
+
+解压：
+
+static int  gzDecompress(const char *src, int srcLen, const char *dst, int dstLen,
+    int * outLen) {
+    z_stream strm;
+    strm.zalloc = NULL;
+    strm.zfree = NULL;
+    strm.opaque = NULL;
+
+    strm.avail_in = srcLen;
+    strm.avail_out = dstLen;
+    strm.next_in = (Bytef *)src;
+    strm.next_out = (Bytef *)dst;
+
+    int err = -1, ret = -1;
+    err = inflateInit2(&strm, MAX_WBITS + 16);
+    if (err == Z_OK) {
+        err = inflate(&strm, Z_FINISH);
+        if (err == Z_STREAM_END) {
+            ret = strm.total_out;
+        }
+        else {
+            inflateEnd(&strm);
+            return err;
+        }
+    }
+    else {
+        inflateEnd(&strm);
+        return err;
+    }
+    inflateEnd(&strm);
+    (*outLen) = ret;
+    return err;
+}
+ 
