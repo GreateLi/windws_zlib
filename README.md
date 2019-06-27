@@ -41,3 +41,4 @@ zlib\contrib\masmx64\bld_ml64.bat
 
 解决方法：在 zlib工程中添加宏 ZLIB_WINAPI
  
+3.其它问题一般设置 设置zlibstat项目编译方式(MT/MD) 和EXE /DLL一致，一般可以解决。
